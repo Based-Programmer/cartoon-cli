@@ -1,2 +1,2 @@
 # cartoon-cli
-Stream &amp; Download cartoon from ur terminal
+Stream &amp; Download Cartoon from your terminal
