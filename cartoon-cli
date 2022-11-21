@@ -35,8 +35,8 @@ num_ep="$(echo "$data" | wc -l)"
 
 selection () {
     case "$REPLY" in
-        n) selected="$(echo "$data" | sed "$(($current_ep - 1)) q;d")" ;;
-        p) selected="$(echo "$data" | sed "$(($current_ep + 1)) q;d")" ;;
+        n) selected="$(echo "$data" | sed "$((current_ep - 1)) q;d")" ;;
+        p) selected="$(echo "$data" | sed "$((current_ep + 1)) q;d")" ;;
         r) selected="$(echo "$data" | sed "$current_ep q;d")" ;;
         d) selected="$(echo "$data" | sed "$current_ep q;d")" && is_download=y ;;
         *) selected="$(echo "$data" | fzf --with-nth 2.. --tac --height=33% --border -1 --layout=reverse --cycle --prompt 'Select a Episode')"
