@@ -9,7 +9,7 @@ while getopts 'dp:q:h' OPT; do
         d) is_download=y ;;
         p) is_download=y && download_dir="$OPTARG" ;;
         q) quality=$OPTARG ;;
-        *) echo '\nUsage:\ncartoon <Options> <search term>\n\nOptions:\n-d Download Cartoon in ~/Videos\n-p Select Download Directory\n-q Select Video Quality [1080p|720p|480p|360p]\n-h Help' && exit ;;
+        *) echo '\nUsage:\ncartoon-cli <Options> <search term>\n\nOptions:\n-d Download Cartoon in ~/Videos\n-p Select Download Directory\n-q Select Video Quality [1080p|720p|480p|360p]\n-h Help' && exit ;;
 	esac
 done
 shift $((OPTIND - 1))
