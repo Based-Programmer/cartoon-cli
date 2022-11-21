@@ -24,7 +24,7 @@ if echo "$data" | grep -q 'Object moved to <a href="/Cartoon/'; then
     selected="$(echo "$data" | sed -nE 's,.*Object moved to <a href="(/Cartoon/[^"]*).*,https://kimcartoon.li\1,p')"
     cartoon_title="$(echo "$data" | sed -nE 's_.*Object moved to <a href="/Cartoon/([^&,"]*).*_\1_p' | tr '-' ' ')"
 else    
-    selected="$(echo "$data" | sed -nE 's,[[:space:]]*<a href="(/Cartoon/[^"]*)">(.*).*,https://kimcartoon.li\1 \2,p' | sed -E 's/&quot;/"/g;s/&apos;|&#39;/\x27/g;s/&amp;/\&/g;s/&lt;/</g;s/&gt;/>/g' | fzf --with-nth 2.. --height=33% --border -1 --layout=reverse --cycle --prompt 'Select a Cartoon')"
+    selected="$(echo "$data" | sed -nE 's,[[:space:]]*<a href="(/Cartoon/[^"]*)">(.*)</a>.*,https://kimcartoon.li\1 \2,p' | sed -E 's/&quot;/"/g;s/&apos;|&#39;/\x27/g;s/&amp;/\&/g;s/&lt;/</g;s/&gt;/>/g' | fzf --with-nth 2.. --height=33% --border -1 --layout=reverse --cycle --prompt 'Select a Cartoon')"
     cartoon_title="$(echo "$selected" | sed 's/[^ ]* //')"
 fi    
 
