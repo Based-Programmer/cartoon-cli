@@ -9,53 +9,54 @@ while getopts 'dp:q:h' OPT; do
         d) is_download=y ;;
         p) is_download=y && download_dir="$OPTARG" ;;
         q) quality=$OPTARG ;;
-        *) echo '\nUsage:\ncartoon-cli <Options> <search term>\n\nOptions:\n-d Download Cartoon in ~/Videos\n-p Select Download Directory\n-q Select Video Quality [1080p|720p|480p|360p]\n-h Help' && exit ;;
+        *) printf '\nUsage:\ncartoon-cli <Options> <search term>\n\nOptions:\n-d Download Cartoon in ~/Videos\n-p Select Download Directory\n-q Select Video Quality [1080p|720p|480p|360p]\n-h Help\n' && exit 1 ;;
 	esac
 done
 shift $((OPTIND - 1))
 
-[ -z "$*" ] && printf 'Search Cartoon\n>' && read -r name || name="$*"
-echo "Searching Cartoon - $name"
+[ -z "$*" ] && printf 'Search Cartoon\n>\n' && read -r name || name="$*"
+printf 'Searching Cartoon - %s\n' "$name"
 
 data="$(curl -s 'https://kimcartoon.li/Search/Cartoon' --data-urlencode "keyword=$name")"
-[ -z "$data" ] && echo 'No Result' && exit 1
+[ -z "$data" ] && printf 'No Result, Check Internet Connection\n' && exit 1
 
-if echo "$data" | grep -q 'Object moved to <a href="/Cartoon/'; then
-    selected="$(echo "$data" | sed -nE 's,.*Object moved to <a href="(/Cartoon/[^"]*).*,https://kimcartoon.li\1,p')"
-    cartoon_title="$(echo "$data" | sed -nE 's_.*Object moved to <a href="/Cartoon/([^&,"]*).*_\1_p' | tr '-' ' ')"
+if printf '%s' "$data" | grep -q 'Object moved to <a href="/Cartoon/'; then
+    selected="$(printf '%s' "$data" | sed -nE 's,.*Object moved to <a href="(/Cartoon/[^"]*).*,https://kimcartoon.li\1,p')"
+    cartoon_title="$(printf '%s' "$data" | sed -nE 's_.*Object moved to <a href="/Cartoon/([^&"]*).*_\1_p' | tr '-' ' ')"
 else    
-    selected="$(echo "$data" | sed -nE 's,[[:space:]]*<a href="(/Cartoon/[^"]*)">(.*)</a>.*,https://kimcartoon.li\1 \2,p' | sed -E 's/&quot;/"/g;s/&apos;|&#39;/\x27/g;s/&amp;/\&/g;s/&lt;/</g;s/&gt;/>/g' | fzf --with-nth 2.. --height=33% --border -1 --layout=reverse --cycle --prompt 'Select a Cartoon')"
-    cartoon_title="$(echo "$selected" | sed 's/[^ ]* //')"
+    data="$(printf '%s' "$data" | sed -nE 's,[[:space:]]*<a href="(/Cartoon/[^"]*)">(.*)</a>.*,https://kimcartoon.li\1 \2,p' | sed -E 's/&quot;/"/g;s/&apos;|&#39;/\x27/g;s/&amp;/\&/g;s/&lt;/</g;s/&gt;/>/g')"
+    [ -z "$data" ] && printf 'Sorry, Cartoon not found\n' && exit 1 || selected="$(printf '%s' "$data" | fzf --with-nth 2.. --height=33% --border -1 --layout=reverse --cycle --prompt 'Select a Cartoon: ')"
+    cartoon_title="$(printf '%s' "$selected" | sed 's/[^ ]* //')"
 fi    
 
-[ -z "$selected" ] && echo "Nothing's selected" && exit
+[ -z "$selected" ] && printf "Nothing's selected\n" && exit
 data="$(curl -s "${selected%% *}" | sed -nE 's,[[:space:]]*<li><a rel="noreferrer noopener" href="(/Cartoon/[^"]*)"><span>(.*)</span>.*,https://kimcartoon.li\1 \2,p' | sed -E 's/&quot;/"/g;s/&apos;|&#39;/\x27/g;s/&amp;/\&/g;s/&lt;/</g;s/&gt;/>/g')"
 
-num_ep="$(echo "$data" | wc -l)"
+num_ep="$(printf '%s\n' "$data" | wc -l)"
 
 selection () {
     case "$REPLY" in
-        n) selected="$(echo "$data" | sed "$((current_ep - 1)) q;d")" ;;
-        p) selected="$(echo "$data" | sed "$((current_ep + 1)) q;d")" ;;
-        r) selected="$(echo "$data" | sed "$current_ep q;d")" ;;
-        d) selected="$(echo "$data" | sed "$current_ep q;d")" && is_download=y ;;
-        *) selected="$(echo "$data" | fzf --with-nth 2.. --tac --height=33% --border -1 --layout=reverse --cycle --prompt 'Select a Episode')"
+        n) selected="$(printf '%s' "$data" | sed "$((current_ep - 1)) q;d")" ;;
+        p) selected="$(printf '%s' "$data" | sed "$((current_ep + 1)) q;d")" ;;
+        r) selected="$(printf '%s' "$data" | sed "$current_ep q;d")" ;;
+        d) selected="$(printf '%s' "$data" | sed "$current_ep q;d")" && is_download=y ;;
+        *) selected="$(printf '%s' "$data" | fzf --with-nth 2.. --tac --border -1 --layout=reverse --cycle --prompt 'Select a Episode: ')"
     esac    
-    [ -z "$selected" ] && echo "Nothing's selected" && exit
+    [ -z "$selected" ] && printf "Nothing's selected\n" && exit
 }
 
 fetch_link () {
-    current_ep="$(echo "$data" | grep -m1 -n "$selected" | cut -d: -f1)"
-    [ "$num_ep" -gt 1 ] && ep_title="$(echo "$selected" | sed "s/[^ ]*//")"
+    current_ep="$(printf '%s' "$data" | grep -m1 -n "$selected" | cut -d: -f1)"
+    [ "$num_ep" -gt 1 ] && ep_title="$(printf '%s' "$selected" | sed "s/[^ ]*//")"
     luxubu="$(curl -sA 'Mozilla/5.0' "${selected%% *}" | sed -nE 's,.*https://www.luxubu.review/v/([^"]*).*,https://www.luxubu.review/api/source/\1,p')"
-    [ -z "$luxubu" ] && echo 'Link not found' && exit 1
-    api="$(curl -s "$luxubu" -d 'r=&d=www.luxubu.review' | tr -d '\\')"
-    link="$(echo "$api" | sed -nE "s/.*\"file\":\"([^\"]*)\",\"label\":\"$quality\".*/\1/p")"
-    [ -z "$link" ] && link="$(echo "$api" | sed -nE 's/.*"file":"([^"]*).*/\1/p')"
+    [ -z "$luxubu" ] && printf 'Link not found\n' && exit 1
+    api="$(curl -s "$luxubu" -d 'r=&d=www.luxubu.review' | tr -d \\\\)"
+    link="$(printf '%s' "$api" | sed -nE "s/.*\"file\":\"([^\"]*)\",\"label\":\"$quality\".*/\1/p")"
+    [ -z "$link" ] && link="$(printf '%s' "$api" | sed -nE 's/.*"file":"([^"]*).*/\1/p')"
 }
 
 play () {
-    echo "Playing $cartoon_title$ep_title"
+    printf 'Playing %s%s\n' "$cartoon_title" "$ep_title"
     if uname -a | grep -qE '[Aa]ndroid'; then
         am start --user 0 -a android.intent.action.VIEW -d "$link" -n org.videolan.vlc/org.videolan.vlc.gui.video.VideoPlayerActivity -e 'title' "$cartoon_title$ep_title" > /dev/null 2>&1 &
     else
@@ -64,12 +65,12 @@ play () {
 }
 
 download () {
-    echo "Downloading $cartoon_title$ep_title"
+    printf 'Downloading %s%s\n' "$cartoon_title" "$ep_title"
     
     if [ "$num_ep" -gt 1 ]; then
-    aria2c "$link" --check-certificate=false --summary-interval=0 -c -j 16 -x 16 -s 16 -k 1M --dir="$download_dir/$cartoon_title" -o "$ep_title.mp4" --download-result=hide && echo "Download Completed $cartoon_title$ep_title" || echo "Download Failed $cartoon_title$ep_title"
+    aria2c "$link" --check-certificate=false --summary-interval=0 -c -j 16 -x 16 -s 16 -k 1M --dir="$download_dir/$cartoon_title" -o "$ep_title.mp4" --download-result=hide && printf 'Download Completed %s%s\n' "$cartoon_title" "$ep_title" || printf 'Download Failed %s%s\n' "$cartoon_title" "$ep_title"
     else
-    aria2c "$link" --check-certificate=false --summary-interval=0 -c -j 16 -x 16 -s 16 -k 1M --dir="$download_dir" -o "$cartoon_title.mp4" --download-result=hide && echo "Download Completed $cartoon_title" || echo "Download Failed $cartoon_title"
+    aria2c "$link" --check-certificate=false --summary-interval=0 -c -j 16 -x 16 -s 16 -k 1M --dir="$download_dir" -o "$cartoon_title.mp4" --download-result=hide && printf 'Download Completed %s\n' "$cartoon_title" || printf 'Download Failed %s\n' "$cartoon_title"
     fi
 }    
 
@@ -79,14 +80,17 @@ while [ "$REPLY" != q ]; do
     tput clear
     [ "$is_download" = 'y' ] && download || play
 
-    if [ "$current_ep" = "$num_ep" ]; then
-        option='(n) next'
-    elif [ "$current_ep" -eq 1 ]; then
-        option='(p) previous'
+    if [ "$num_ep" -gt 1 ]; then
+        if [ "$current_ep" = "$num_ep" ]; then
+            printf "(n) next\n(r) replay\n(d) download\n(s) select\n(q) quit\n> "
+        elif [ "$current_ep" -eq 1 ]; then
+            printf "(p) previous\n(r) replay\n(d) download\n(s) select\n(q) quit\n> "
+        else
+            printf "(n) next\n(p) previous\n(r) replay\n(d) download\n(s) select\n(q) quit\n> "
+        fi
     else
-        option='(n) next\n(p) previous'
+        printf "(r) replay\n(d) download\n(q) quit\n> "
     fi    
 
-    printf "$option\n(r) replay\n(d) download\n(s) select\n(q) exit\n>"
     read -r REPLY
 done
