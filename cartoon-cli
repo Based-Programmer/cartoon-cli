@@ -36,10 +36,10 @@ num_ep="$(printf '%s\n' "$data" | wc -l)"
 
 selection () {
     case "$REPLY" in
-        n) selected="$(printf '%s' "$data" | sed "$((current_ep - 1)) q;d")" ;;
-        p) selected="$(printf '%s' "$data" | sed "$((current_ep + 1)) q;d")" ;;
-        r) selected="$(printf '%s' "$data" | sed "$current_ep q;d")" ;;
-        d) selected="$(printf '%s' "$data" | sed "$current_ep q;d")" && is_download=y ;;
+        next) selected="$(printf '%s' "$data" | sed "$((current_ep - 1)) q;d")" ;;
+        previous) selected="$(printf '%s' "$data" | sed "$((current_ep + 1)) q;d")" ;;
+        replay) selected="$(printf '%s' "$data" | sed "$current_ep q;d")" ;;
+	download) selected="$(printf '%s' "$data" | sed "$current_ep q;d")" && is_download=y ;;
         *) selected="$(printf '%s' "$data" | fzf --with-nth 2.. --tac --border -1 --layout=reverse --cycle --prompt 'Select a Episode: ')"
     esac    
     [ -z "$selected" ] && printf "Nothing's selected\n" && exit
@@ -74,7 +74,7 @@ download () {
     fi
 }    
 
-while [ "$REPLY" != q ]; do
+while [ "$REPLY" != 'quit' ]; do
     selection
     fetch_link
     tput clear
@@ -82,15 +82,15 @@ while [ "$REPLY" != q ]; do
 
     if [ "$num_ep" -gt 1 ]; then
         if [ "$current_ep" = "$num_ep" ]; then
-            printf "(n) next\n(r) replay\n(d) download\n(s) select\n(q) quit\n> "
+            selection="next\nreplay\ndownload\nselect\nquit"
         elif [ "$current_ep" -eq 1 ]; then
-            printf "(p) previous\n(r) replay\n(d) download\n(s) select\n(q) quit\n> "
+            selection="previous\nreplay\ndownload\nselect\nquit"
         else
-            printf "(n) next\n(p) previous\n(r) replay\n(d) download\n(s) select\n(q) quit\n> "
+            selection="next\nprevious\nreplay\ndownload\nselect\nquit"
         fi
     else
-        printf "(r) replay\n(d) download\n(q) quit\n> "
+        selection="replay\ndownload\nquit"
     fi    
 
-    read -r REPLY
+    REPLY="$(printf "$selection" | fzf --height=22% --border -1 --layout=reverse --cycle --prompt 'Select a Option: ')"
 done
