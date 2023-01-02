@@ -22,4 +22,5 @@ mv cartoon-cli $PREFIX/bin/
 - curl
 - fzf
 - mpv (Streaming video)
+- vlc (for android)
 - aria2 (Optimal, for downloading)
